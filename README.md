@@ -1,2 +1,2 @@
 # MFBG-Magnolias
-Magnoliaville Interactive Map
+Magnoliaville Interactive Map (hover and click to see info)
