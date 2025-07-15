@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Magnolia Hover Animation with Image</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.29/"></script>
+  <style>
+    html, body, #viewDiv {
+        /*with help of chatgpt*/
+      padding: 0; margin: 0;
+      height: 100%; width: 100%;
+      position: relative;
+    }
+    .hover-label {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transform: translate(-50%, -120%);
+  transition: font-size 0.3s ease;
+  max-width: 280px;
+  white-space: normal;
+  overflow: visible;
+  z-index: 10;
+}
+.hover-label img {
+  height: 30px;
+  width: auto;
+  margin-right: 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  object-fit: cover;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.hover-label span {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+  </style>
+</head>
+<body>
+  <div id="viewDiv"></div>
+
+  <div id="hoverLabel" class="hover-label" style="display: none;">
+    <img id="hoverImage" src="" alt="Tree Image" style="display: none;" />
+    <span id="hoverText"></span>
+  </div>
+
+  <script>
+    require([
+      "esri/views/MapView",
+      "esri/WebMap"
+    ], function (MapView, WebMap) {
+      const view = new MapView({
+        container: "viewDiv",
+        map: new WebMap({ portalItem: { id: "9e96c9345d914cdc972f0a7e13199dd2" } }),
+        center: [-79.821,33.867],
+        zoom: 19
+      });
+
+      const labelDiv = document.getElementById("hoverLabel");
+      const hoverImage = document.getElementById("hoverImage");
+      const hoverText = document.getElementById("hoverText");
+      let currentOID = null;
+
+      view.when(() => {
+        const magnoliaLayer = view.map.layers.find(l => l.title && l.title.includes("Magnolia"));
+        if (!magnoliaLayer) {
+          console.error("Magnolia layer not found");
+          return;
+        }
+
+        view.on("pointer-move", (evt) => {
+          view.hitTest(evt).then(res => {
+            const result = res.results.find(r => r.graphic.layer === magnoliaLayer);
+            if (!result) {
+              labelDiv.style.display = "none";
+              currentOID = null;
+              return;
+            }
+
+            const g = result.graphic;
+            if (currentOID === g.attributes.OBJECTID) return;
+            currentOID = g.attributes.OBJECTID;
+
+            const screen = view.toScreen(g.geometry);
+            labelDiv.style.left = screen.x + "px";
+            labelDiv.style.top = screen.y + "px";
+
+            hoverText.textContent = g.attributes.SName || "Unknown";
+
+            if (g.attributes.Photo1_src) {
+              hoverImage.src = g.attributes.Photo1_src;
+              hoverImage.style.display = "inline-block";
+            } else {
+              hoverImage.style.display = "none";
+              hoverImage.src = "";
+            }
+
+            labelDiv.style.display = "flex";
+          });
+        });
+
+        view.on("click", (evt) => {
+          view.hitTest(evt).then(res => {
+            const result = res.results.find(r => r.graphic.layer === magnoliaLayer);
+            if (result) {
+              view.popup.open({ features: [result.graphic], location: result.mapPoint });
+            } else {
+              view.popup.close();
+            }
+          });
+        });
+      });
+    });
+  </script>
+</body>
+</html>
